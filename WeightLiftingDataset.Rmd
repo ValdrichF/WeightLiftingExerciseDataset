@@ -1,16 +1,127 @@
 ---
 title: "WeightLiftingDataset"
 author: "ValdrichFernandes"
-date: "5/16/2020"
+date: "5/18/2020"
 output: html_document
 ---
+# Summary
 
-```{r}
+# Downloading and opening the datasets.
+The data is downloaded to a folder named Data which is in the working directory of the project. 
+```{r, warning=F, message=FALSE}
 if(!file.exists('./Data')) dir.create('./Data')
 download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv',
               './Data/pml-training.csv')
 download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv',
               './Data/pml-testing.csv')
-training = read.csv('./Data/pml-training.csv')
-testing = read.csv('./Data/pml-testing.csv')
+training = read.csv('./Data/pml-training.csv', na.strings=c("", "NA"))
+testing = read.csv('./Data/pml-testing.csv', na.strings=c("", "NA"))
 ```
+
+# Loading the required libraries
+```{r, warning=F, message=FALSE}
+library(dplyr)
+library(caret)
+library(caretEnsemble)
+library(e1071)
+library(dplyr)
+library(tidyr)
+library(ROCR)
+library(doParallel)
+cluster <- makeCluster(detectCores() - 1)
+registerDoParallel(cluster)
+```
+
+# Data exploration
+
+## Cleaning the dataset
+The training data consists of `r paste(dim(training), collapse = ' rows and ')` columns. However, of these columns many have upto `r max(colSums(is.na(testing)))*100/nrow(training)`% missing observations. The columns without any missing observations are selected for the future analysis. Furthermore, the columns user_name and classe are categorical variables and are converted into factors to reflect this. 
+
+``` {r}
+completeCols = which(colSums(is.na(training))==0&names(training)!='X')
+training     = training[,completeCols]
+timeCols     = grep('time|window', names(training), value = T)
+
+usernames    = unique(training$user_name)
+classeUnique = unique(training$classe)
+training     = select(training, -all_of(timeCols))%>%
+    mutate(user_name = factor(user_name, levels = usernames),
+           classe    = factor(classe, levels = classeUnique))
+```
+
+The resulting complete training set consists of `r paste(dim(training), collapse = ' rows and ')` columns.
+
+## Splitting the training set
+The training data can be further split into a training set and validation set to help evaluate the performance of the different models. They are split in a ration of 60-20-20 for training-testing-validation
+``` {r, cache = TRUE}
+set.seed(123)
+testInd = createDataPartition(training$classe, p = 0.2, list = F)
+test = training[testInd,]
+train = training[-testInd,]
+validationInd = createDataPartition(train$classe, p = 0.25, list = F)
+valid = train[validationInd,]
+trainE = train[-validationInd,]
+rm(train)
+```
+## Density plots
+To summarise the data, its range and distribution, a density plot of every column is used. This can help inform any required preprocessing for the model.
+```{r, cache=TRUE, fig.height=7, fig.width=12}
+gathered = gather(trainE, -classe, -user_name,key = 'var', value = 'value')
+ggplot(gathered, aes(value))+
+    geom_density()+
+    facet_wrap(~var, scales = 'free')+
+    theme_bw()
+```
+
+The variables have different ranges. For most classification models, the data would need to be centered at 0 and scaled to have a stadard deviation of 1. This is to reduce the influence of one variable over the rest hence creating better predictions.
+
+# Model preparation
+
+## Individual models
+The training data is scaled and centered as part of the preprocessing. Furthermore, a Pricipal Component Analysis was used to reduce the number of variables and reduce the variance between models. Three types of models are chosen to classify the data:
+
+1. Random forest (rf)
+2. K-Nearest Neighbours (knn)
+3. C5.0 (cart)
+<br>All the models have a high accuracy (>90%) with cart being the most accurate as can be seen in the sumary table below.
+```{r, cache=TRUE, comment='#'}
+trnCntrl = trainControl(method = "cv", number = 5, allowParallel = T, classProbs = T)
+# Random forest
+mod.rf = train(classe~., trainE, method = 'rf', trControl = trnCntrl)
+# C5.0
+mod.cart <- train(classe ~ ., trainE, method="C5.0", trControl = trnCntrl)
+# K nearest neighbours
+mod.knn = train(classe~., trainE, method = 'knn', trControl = trnCntrl, preProcess = c("center","scale"))
+singleRes = list(rf = mod.rf, cart = mod.cart, knn = mod.knn)
+summary(resamples(singleRes))$statistics$Accuracy
+```
+
+## Ensemble model
+The accuracy of the final prediction can potentially be improved by grouping the three models and predicting based on the estimated probablities of each model. This was done by creating a dataframe containing the probablities in rows and training a random forest model to it. The validation dataset was used for this purpose
+```{r, cache = TRUE}
+createProbDf = function(objList, newdata){
+    rf = predict(objList$rf, newdata, type = 'prob')
+    names(rf) = paste('rf.', names(rf))
+    knn = predict(objList$knn, newdata, type = 'prob')
+    names(knn) = paste('knn.', names(knn))
+    cart = predict(objList$cart, newdata, type = 'prob')
+    names(cart) = paste('cart.', names(cart))
+    
+    data.frame(rf, knn, cart)
+}
+
+ProbDf = createProbDf(singleRes, valid)
+ensem = train(ProbDf, valid$classe, method = 'rf', trControl = trnCntrl)
+stopCluster(cluster)
+registerDoSEQ()
+```
+
+# Testing the model
+The test set is used to evaluate the accuracy of the model in a new dataset. For this, a confusion Matrix is used.
+```{r, cache = TRUE}
+confMat = confusionMatrix(predict(ensem, createProbDf(singleRes, test)), test$classe)
+confMat
+```
+
+# Conclusion
+With an accuracy of `r round(confMat$overall[1],4)` on a test dataset, which is higher than the highest accuracy of individual models and hence the ensembled model proves to be effective in generating accurate predictions.

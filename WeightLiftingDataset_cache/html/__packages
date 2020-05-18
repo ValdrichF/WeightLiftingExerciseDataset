@@ -1,0 +1,12 @@
+base
+dplyr
+lattice
+ggplot2
+caret
+caretEnsemble
+e1071
+tidyr
+ROCR
+foreach
+iterators
+doParallel
