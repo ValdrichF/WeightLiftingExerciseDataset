@@ -35,7 +35,7 @@ registerDoParallel(cluster)
 # Data exploration
 
 ## Cleaning the dataset
-The training data consists of `r paste(dim(training), collapse = ' rows and ')` columns. However, of these columns many have upto `r max(colSums(is.na(testing)))*100/nrow(training)`% missing observations. The columns without any missing observations are selected for the future analysis. Furthermore, the columns user_name and classe are categorical variables and are converted into factors to reflect this. 
+The training data consists of `r paste(dim(training), collapse = ' rows and ')` columns. However, of these columns many have upto `r round(max(colSums(is.na(training)))*100/nrow(training),1)`% missing observations. The columns without any missing observations are selected for the future analysis. Furthermore, the columns user_name and classe are categorical variables and are converted into factors to reflect this. 
 
 ``` {r}
 completeCols = which(colSums(is.na(training))==0&names(training)!='X')

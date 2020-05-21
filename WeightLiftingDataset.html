@@ -400,7 +400,7 @@ registerDoParallel(cluster)</code></pre>
 <h1>Data exploration</h1>
 <div id="cleaning-the-dataset" class="section level2">
 <h2>Cleaning the dataset</h2>
-<p>The training data consists of 19622 rows and 160 columns. However, of these columns many have upto 0.1019264% missing observations. The columns without any missing observations are selected for the future analysis. Furthermore, the columns user_name and classe are categorical variables and are converted into factors to reflect this.</p>
+<p>The training data consists of 19622 rows and 160 columns. However, of these columns many have upto 97.9% missing observations. The columns without any missing observations are selected for the future analysis. Furthermore, the columns user_name and classe are categorical variables and are converted into factors to reflect this.</p>
 <pre class="r"><code>completeCols = which(colSums(is.na(training))==0&amp;names(training)!=&#39;X&#39;)
 training     = training[,completeCols]
 timeCols     = grep(&#39;time|window&#39;, names(training), value = T)
