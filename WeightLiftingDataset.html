@@ -375,11 +375,15 @@ summary {
 <div id="downloading-and-opening-the-datasets." class="section level1">
 <h1>Downloading and opening the datasets.</h1>
 <p>The data is downloaded to a folder named Data which is in the working directory of the project.</p>
-<pre class="r"><code>if(!file.exists(&#39;./Data&#39;)) dir.create(&#39;./Data&#39;)
-download.file(&#39;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&#39;,
-              &#39;./Data/pml-training.csv&#39;)
-download.file(&#39;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&#39;,
-              &#39;./Data/pml-testing.csv&#39;)
+<pre class="r"><code>if(!dir.exists(&#39;./Data&#39;)) dir.create(&#39;./Data&#39;)
+if(!file.exists(&#39;./Data/pml-training.csv&#39;)){
+    download.file(&#39;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&#39;,
+                  &#39;./Data/pml-training.csv&#39;)
+    }
+if(!file.exists(&#39;./Data/pml-testing.csv&#39;)){
+    download.file(&#39;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&#39;, 
+                  &#39;./Data/pml-testing.csv&#39;)
+}
 training = read.csv(&#39;./Data/pml-training.csv&#39;, na.strings=c(&quot;&quot;, &quot;NA&quot;))
 testing = read.csv(&#39;./Data/pml-testing.csv&#39;, na.strings=c(&quot;&quot;, &quot;NA&quot;))</code></pre>
 </div>

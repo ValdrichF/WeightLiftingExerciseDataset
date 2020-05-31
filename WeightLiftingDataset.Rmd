@@ -9,11 +9,15 @@ output: html_document
 # Downloading and opening the datasets.
 The data is downloaded to a folder named Data which is in the working directory of the project. 
 ```{r, warning=F, message=FALSE}
-if(!file.exists('./Data')) dir.create('./Data')
-download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv',
-              './Data/pml-training.csv')
-download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv',
-              './Data/pml-testing.csv')
+if(!dir.exists('./Data')) dir.create('./Data')
+if(!file.exists('./Data/pml-training.csv')){
+    download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv',
+                  './Data/pml-training.csv')
+    }
+if(!file.exists('./Data/pml-testing.csv')){
+    download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv', 
+                  './Data/pml-testing.csv')
+}
 training = read.csv('./Data/pml-training.csv', na.strings=c("", "NA"))
 testing = read.csv('./Data/pml-testing.csv', na.strings=c("", "NA"))
 ```
